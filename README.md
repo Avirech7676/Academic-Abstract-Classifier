@@ -1,111 +1,82 @@
-# Academic-Abstract-Classifier
-🧠 Project Overview
+## Abstract Classification Service
 
-The Abstract Classification Service is a lightweight, high-performance system designed to classify research paper abstracts using a fine-tuned Transformer model.
-The project includes:
+This project trains a small, fast Transformer-based classifier for academic paper abstracts
+and exposes a lightweight REST API for inference.
 
-A training pipeline for building a DistilBERT-based classifier
+### 1. Environment setup
 
-A fully functional REST API using FastAPI
+- **Python**: 3.9 or 3.10 recommended.
+- **Install dependencies**:
 
-Easy deployment using Docker
-
-Clean dataset management and evaluation tools
-
-This repository is ideal for researchers, developers, and students who want to build or integrate fast, efficient NLP classification models.
-
-🚀 Key Features
-
-🔥 Fast Transformer-based Classification using DistilBERT
-
-🧹 Automated Data Cleaning & Column Detection
-
-⚖️ Balanced Training Subset for better generalization
-
-📊 Detailed Evaluation Metrics (precision, recall, F1, per-class metrics)
-
-🧪 Confusion Matrix & Misclassification Logs
-
-🌐 FastAPI-based REST API for real-time inference
-
-🐳 Docker Support for easy deployment
-
-🛠️ Environment Setup
-1. Requirements
-
-Python: 3.9 or 3.10 recommended
-
-Pip & virtual environment suggested
-
-GPU optional (automatically utilized if available)
-
-2. Install Dependencies
+```bash
 pip install -r requirements.txt
+```
 
-📚 Training the Model
-Steps:
+If you have a GPU and CUDA installed, `torch` will use it automatically. On CPU-only
+machines, training will automatically limit the subset size to keep things fast.
 
-Ensure your dataset (CSV/TSV) exists in the project root.
-Default provided: arxiv_data.csv.
+### 2. Training the model
 
-Train the model:
+1. Place your dataset (CSV/TSV) in the project root (already provided as `arxiv_data.csv`).
+2. Run the training script:
 
+```bash
 python train_model.py
+```
 
-Training Workflow:
+The script will:
 
-Auto-detects abstract & label columns
+- Auto-detect the abstract and label columns.
+- Clean and filter the data (remove missing and very short abstracts).
+- Build a balanced subset (up to ~1,200 samples, or 800 on CPU-only).
+- Split into **train / val / test** (80/10/10, stratified by label).
+- Train a **DistilBERT** classifier for 1 epoch.
+- Save artifacts:
+  - `final_model/` (model + tokenizer + `labels.json`)
+  - `train.csv`, `val.csv`, `test.csv`
+  - `metrics.json` (includes accuracy, macro precision/recall/F1, per-class metrics)
+  - `confusion_matrix.csv`
+  - `misclassified_samples.csv`
 
-Cleans missing or very short abstracts
+### 3. Running the API locally
 
-Builds a balanced subset (≈1200 samples; 800 on CPU-only)
+After training has completed and `final_model/` exists:
 
-Splits data into train/val/test (80/10/10, stratified)
-
-Fine-tunes a DistilBERT classifier for 1 epoch
-
-Saves the following artifacts:
-
-Artifact	Description
-final_model/	Model, tokenizer, labels
-train.csv	Training split
-val.csv	Validation split
-test.csv	Testing split
-metrics.json	Accuracy + macro precision/recall/F1
-confusion_matrix.csv	Confusion matrix data
-misclassified_samples.csv	Records incorrect predictions
-🌐 Running the API Locally
-
-After training and ensuring final_model/ is present:
-
-Start the FastAPI server
+```bash
 uvicorn app:app --host 0.0.0.0 --port 8000
+```
 
-API Endpoints
-✔ Health Check
-GET /health
+#### Health check
 
+```bash
+curl http://localhost:8000/health
+```
 
-Response:
+Expected response:
 
+```json
 {"status": "ok"}
+```
 
-✔ Fetch Labels
-GET /labels
+#### Get labels
 
-✔ Predict Label
-POST /predict
+```bash
+curl http://localhost:8000/labels
+```
 
+Returns a JSON array of label names used during training.
 
-Example:
+#### Predict
 
+```bash
 curl -X POST "http://localhost:8000/predict" \
   -H "Content-Type: application/json" \
-  -d '{"abstract":"This paper proposes a transformer-based classification approach..."}'
+  -d '{"abstract":"This paper proposes a transformer-based method for efficient document classification..."}'
+```
 
+Example response:
 
-Example Output:
-
+```json
 {
   "label": "cs.LG",
   "score": 0.9234,
@@ -114,53 +85,47 @@ Example Output:
     {"label": "cs.AI", "score": 0.0345}
   ]
 }
+```
 
-🐳 Docker Usage
-Build Image
+### 4. Docker usage
+
+Build the image:
+
+```bash
 docker build -t abstract-classifier .
+```
 
-Train Model in Docker
+Train inside the container (optional, you can also train on the host and just copy `final_model/`):
+
+```bash
 docker run --rm -v ${PWD}:/app abstract-classifier python train_model.py
+```
 
-Run API in Docker
+Serve the API:
+
+```bash
 docker run --rm -p 8000:8000 -v ${PWD}:/app abstract-classifier \
   uvicorn app:app --host 0.0.0.0 --port 8000
+```
 
-☁️ Deployment Options
-Render / Railway
+### 5. Deployment options
 
-Use this repo and set the Start Command:
+- **Render / Railway**:
+  - Use this repo.
+  - Set the start command to:
 
+```bash
 uvicorn app:app --host 0.0.0.0 --port 8000
+```
 
-Hugging Face Spaces
+- **Hugging Face Space**:
+  - Create a Space with **Docker** or **FastAPI** backend.
+  - Use this `Dockerfile` or `app.py` + `requirements.txt`.
 
-Use Docker-based deployment
-OR
+Once deployed, Cursor (or any client) can:
 
-Use app.py + requirements.txt directly
+- Call `GET /health` for liveness.
+- Call `GET /labels` to show possible categories.
+- Call `POST /predict` with an abstract string to get the predicted label and scores.
 
-📂 Repository Structure
-project-root/
-│── app.py
-│── train_model.py
-│── arxiv_data.csv
-│── requirements.txt
-│── Dockerfile
-│── final_model/
-│── metrics.json
-│── confusion_matrix.csv
-│── misclassified_samples.csv
-│── README.md
 
-🤝 Contributing
-
-Contributions are welcome!
-
-Fork the repository
-
-Create a new feature branch
-
-Commit your changes
-
-Submit a pull request
