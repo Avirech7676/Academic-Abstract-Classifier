@@ -45,11 +45,12 @@ Example response:
 
 {
   "label": "cs.LG",
-  "score": 0.9234,
+  "score": 0.9234,  `      
   "all_scores": [
     {"label": "cs.LG", "score": 0.9234},
     {"label": "cs.AI", "score": 0.0345}
-  ]
+  ][README.md](https://github.com/user-attachments/files/24085320/README.md)
+
 }
 4. Docker usage
 Build the image:
